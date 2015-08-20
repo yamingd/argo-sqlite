@@ -1,0 +1,1 @@
+include ':app', ':sqlite-annotation', ':sqlite-compiler', ':sqlite-mapper'

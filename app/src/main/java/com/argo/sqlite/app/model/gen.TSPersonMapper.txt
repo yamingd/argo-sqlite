@@ -1,0 +1,135 @@
+package com.argo.sqlite.app.model;
+
+import com.argo.sqlite.SqliteMapper;
+import java.lang.Integer;
+import java.lang.Override;
+import java.lang.String;
+import java.util.ArrayList;
+import java.util.List;
+import net.sqlcipher.Cursor;
+import net.sqlcipher.database.SQLiteStatement;
+
+public class TSPersonMapper extends SqliteMapper<TSPerson, Integer> {
+  private static List<String> columns;
+
+  private static String pkColumn;
+
+  private static String tableName;
+
+  private static String tableCreateSql;
+
+  public static String dbContextTag;
+
+  public static TSPersonMapper instance;
+
+  static {
+    columns = new ArrayList<String>();
+    columns.add("id");
+    columns.add("name");
+    columns.add("birthday");
+    columns.add("secretData");
+    columns.add("female");
+    pkColumn = "id";
+    tableName = "ts_person";
+    dbContextTag = "default";
+  }
+
+  public TSPersonMapper() {
+    super();
+    instance = this;
+  }
+
+  @Override
+  protected void bindInsertStatement(SQLiteStatement statement, TSPerson o) {
+    statement.bindLong(1, o.getId());
+    statement.bindString(2, filterNull(o.getName()));
+    statement.bindLong(3, getDate(o.getBirthday()));
+    statement.bindBlob(4, o.getSecretData());
+    statement.bindLong(5, getBoolean(o.isFemale()));
+  }
+
+  @Override
+  public List<String> getColumns() {
+    return columns;
+  }
+
+  @Override
+  public String getPkColumn() {
+    return pkColumn;
+  }
+
+  @Override
+  public String getTableName() {
+    return tableName;
+  }
+
+  @Override
+  public Class<TSPerson> getClassType() {
+    return TSPerson.class;
+  }
+
+  @Override
+  public String getDbContextTag() {
+    return dbContextTag;
+  }
+
+  @Override
+  public void prepare() {
+    super.prepare();
+    tableCreateSql = "create table if not exists ts_person( id INTEGER PRIMARY KEY, name TEXT, birthday INTEGER, secretData BLOB, female INTEGER );";
+    this.dbContext.createTable(tableCreateSql);
+    tableCreateSql = null;
+  }
+
+  @Override
+  public boolean saveWithRef(TSPerson o) {
+    boolean ret = super.saveWithRef(o);
+    if (!ret) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public boolean delete(TSPerson o) {
+    if (o == null) {
+      return false;
+    }
+    if (deleteStatement == null) {
+      this.compileDeleteStatement();
+    }
+    deleteStatement.bindLong(1, o.getId());
+    int recs = deleteStatement.executeUpdateDelete();
+    return (recs == 1);
+  }
+
+  @Override
+  public TSPerson map(Cursor cursor, TSPerson o) {
+    if (o == null) {
+      o = new TSPerson();
+    }
+    if (cursor.isBeforeFirst()) {
+      cursor.moveToFirst();
+    }
+    o.setId(cursor.getInt(0));
+    o.setName(cursor.getString(1));
+    o.setBirthday(getDate(cursor, 2));
+    o.setSecretData(cursor.getBlob(3));
+    o.setFemale(getBoolean(cursor, 4));
+    return o;
+  }
+
+  @Override
+  public void wrapRef(List<TSPerson> list) {
+    if(list == null || list.size() == 0) {
+      return;
+    }
+  }
+
+  @Override
+  public void wrapRef(TSPerson o) {
+    if(o == null) {
+      return;
+    }
+  }
+}

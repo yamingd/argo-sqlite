@@ -1,0 +1,206 @@
+package com.argo.sqlite.app.model;
+
+import com.argo.sqlite.SqliteMapper;
+import java.lang.Integer;
+import java.lang.Override;
+import java.lang.String;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import net.sqlcipher.Cursor;
+import net.sqlcipher.database.SQLiteStatement;
+
+public class TSAddressMapper extends SqliteMapper<TSAddress, Integer> {
+  private static List<String> columns;
+
+  private static String pkColumn;
+
+  private static String tableName;
+
+  private static String tableCreateSql;
+
+  public static String dbContextTag;
+
+  public static TSAddressMapper instance;
+
+  static {
+    columns = new ArrayList<String>();
+    columns.add("id");
+    columns.add("personId");
+    columns.add("name");
+    pkColumn = "id";
+    tableName = "ts_address";
+    dbContextTag = "default";
+  }
+
+  public TSAddressMapper() {
+    super();
+    instance = this;
+  }
+
+  @Override
+  protected void bindInsertStatement(SQLiteStatement statement, TSAddress o) {
+    statement.bindLong(1, o.getId());
+    statement.bindLong(2, o.getPersonId());
+    statement.bindString(3, filterNull(o.getName()));
+  }
+
+  @Override
+  public List<String> getColumns() {
+    return columns;
+  }
+
+  @Override
+  public String getPkColumn() {
+    return pkColumn;
+  }
+
+  @Override
+  public String getTableName() {
+    return tableName;
+  }
+
+  @Override
+  public Class<TSAddress> getClassType() {
+    return TSAddress.class;
+  }
+
+  @Override
+  public String getDbContextTag() {
+    return dbContextTag;
+  }
+
+  @Override
+  public void prepare() {
+    super.prepare();
+    tableCreateSql = "create table if not exists ts_address( id INTEGER PRIMARY KEY, personId INTEGER, name TEXT );";
+    this.dbContext.createTable(tableCreateSql);
+    tableCreateSql = null;
+  }
+
+  @Override
+  public boolean saveWithRef(TSAddress o) {
+    boolean ret = super.saveWithRef(o);
+    if (!ret) {
+      return false;
+    }
+    // save person;
+    TSPerson refVar0 = o.getPerson();
+    if (null != refVar0) {
+      TSPersonMapper.instance.saveWithRef(refVar0);
+    }
+    return true;
+  }
+
+  @Override
+  public boolean saveWithRef(List<TSAddress> list) {
+    boolean ret = super.saveWithRef(list);
+    if (!ret) {
+      return false;
+    }
+    List vars = new ArrayList();
+    // save person;
+    for(int i=0; i<list.size(); i++) {
+      TSPerson refVar0 = list.get(i).getPerson();
+      if (null != refVar0) {
+        vars.add(refVar0);
+      }
+    }
+    TSPersonMapper.instance.saveWithRef(vars);
+    vars.clear();
+    return true;
+  }
+
+  @Override
+  public boolean saveWithRef(Set<TSAddress> set) {
+    boolean ret = super.saveWithRef(set);
+    if (!ret) {
+      return false;
+    }
+    List vars = new ArrayList();
+    // save person;
+    Iterator<TSAddress> refVar0 = set.iterator();
+    while (refVar0.hasNext()) {
+      TSPerson v = refVar0.next().getPerson();
+      if (null != v) {
+        vars.add(v);
+      }
+    }
+    TSPersonMapper.instance.saveWithRef(vars);
+    vars.clear();
+    return true;
+  }
+
+  @Override
+  public boolean delete(TSAddress o) {
+    if (o == null) {
+      return false;
+    }
+    if (deleteStatement == null) {
+      this.compileDeleteStatement();
+    }
+    deleteStatement.bindLong(1, o.getId());
+    int recs = deleteStatement.executeUpdateDelete();
+    return (recs == 1);
+  }
+
+  @Override
+  public TSAddress map(Cursor cursor, TSAddress o) {
+    if (o == null) {
+      o = new TSAddress();
+    }
+    if (cursor.isBeforeFirst()) {
+      cursor.moveToFirst();
+    }
+    o.setId(cursor.getInt(0));
+    o.setPersonId(cursor.getInt(1));
+    o.setName(cursor.getString(2));
+    return o;
+  }
+
+  public void wrapRefPerson(List<TSAddress> list) {
+    Set<Integer> ids = new HashSet<Integer>();
+    for (int i = 0; i < list.size(); i++) {
+      TSAddress item = list.get(i);
+      ids.add(item.getPersonId());
+    }
+    List<TSPerson> refList = TSPersonMapper.instance.getsWithRef(ids);
+    for (int i = 0; i < list.size(); i++) {
+      TSAddress item = list.get(i);
+      for (int j = 0; j < refList.size(); j++) {
+        TSPerson targetItem = refList.get(j);
+        if (targetItem.getId() == item.getPersonId()) {
+          item.setPerson(targetItem);
+          break;
+        }
+      }
+    }
+  }
+
+  @Override
+  public void wrapRef(List<TSAddress> list) {
+    if(list == null || list.size() == 0) {
+      return;
+    }
+    wrapRefPerson(list);
+  }
+
+  public void wrapRefPerson(TSAddress o) {
+    Integer id = o.getPersonId();
+    if (id == null) {
+      return;
+    }
+    TSPerson refItem = TSPersonMapper.instance.getWithRef(id);
+    o.setPerson(refItem);
+  }
+
+  @Override
+  public void wrapRef(TSAddress o) {
+    if(o == null) {
+      return;
+    }
+    wrapRefPerson(o);
+  }
+}

@@ -1,0 +1,133 @@
+
+apply plugin: 'com.android.application'
+apply plugin: 'com.neenbedankt.android-apt'
+
+def releaseTime() {
+    return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
+}
+
+android {
+    compileSdkVersion 21
+    buildToolsVersion "21.1.0"
+
+    defaultConfig {
+        applicationId "com.argo.sqlite.app"
+        minSdkVersion 15
+        targetSdkVersion 21
+        versionCode 1
+        versionName "1.0.0"
+        multiDexEnabled true
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('keystore')
+            storePassword 'test'
+            keyAlias 'Test Android'
+            keyPassword 'test!'
+        }
+
+        release {
+            storeFile file('keystore')
+            storePassword 'test'
+            keyAlias 'Test Android'
+            keyPassword 'test!'
+        }
+    }
+
+    packagingOptions {
+        // Exclude file to avoid
+        // Error: Duplicate files during packaging of APK
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+        exclude 'README.txt'
+    }
+
+    lintOptions {
+        abortOnError false
+        disable 'InvalidPackage'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            apply plugin: 'signing'
+            apply plugin: 'checkstyle'
+            minifyEnabled true
+            zipAlignEnabled true // this is default for debug
+            shrinkResources true
+
+        }
+
+        release {
+            apply plugin: 'signing'
+            apply plugin: 'checkstyle'
+            minifyEnabled true
+            zipAlignEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+            applicationVariants.all { variant ->
+                variant.outputs.each { output ->
+                    def outputFile = output.outputFile
+                    if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                        // 输出apk名称为test_v1.0_2015-01-15_wandoujia.apk
+                        def fileName = "test_v${defaultConfig.versionName}_${releaseTime()}_${variant.productFlavors[0].name}.apk"
+                        output.outputFile = new File(outputFile.parent, fileName)
+                    }
+                }
+            }
+        }
+
+    }
+
+    //sourceSets for different channels
+    sourceSets {
+        main {
+            manifest.srcFile 'src/main/AndroidManifest.xml'
+            java.srcDirs = ['src/main/java']
+            resources.srcDirs = ['src/main/java']
+            aidl.srcDirs = ['src/main']
+            renderscript.srcDirs = ['src/main']
+            res.srcDirs = ['src/main/res']
+            assets.srcDirs = ['src/main/assets']
+        }
+
+        storeSTest {
+            assets.srcDirs = ['src/storeTest/assets']
+        }
+
+    }
+
+    productFlavors {
+
+        storeDev {
+            signingConfig signingConfigs.release
+            versionName defaultConfig.versionName
+            manifestPlaceholders = [lbsAPIKey: "6105ca2732b45a174a68b48025e23da9"]
+        }
+
+        storeSTest {
+            signingConfig signingConfigs.release
+            versionName defaultConfig.versionName
+            applicationId 'com.argo.sqlite.test'
+            manifestPlaceholders = [lbsAPIKey: "083685246acc11eb0c8b5ea707a7a740"]
+        }
+
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+
+    apt project(':sqlite-compiler')
+
+    androidTestCompile 'junit:junit:4.11'
+    compile project(':sqlite-annotation')
+    compile project(':sqlite-mapper')
+
+}
