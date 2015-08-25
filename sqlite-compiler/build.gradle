@@ -11,7 +11,32 @@ compileTestJava {
     options.encoding='UTF-8'
 }
 
+ext{
+    uploadArchive=true
+    artifactId = 'sqlite-compiler'
+}
+
+version = '1.0.0'
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from sourceSets.main.allSource
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+artifacts {
+    archives jar
+    archives javadocJar
+    archives sourcesJar
+}
+
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile project(':sqlite-annotation')
 }
+
+apply from: '../maven_push.gradle'

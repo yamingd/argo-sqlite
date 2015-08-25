@@ -6,6 +6,11 @@ def releaseTime() {
     return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
 }
 
+ext{
+    uploadArchive=false
+    artifactId = 'sqlite-app-demo'
+}
+
 android {
     compileSdkVersion 21
     buildToolsVersion "21.1.0"

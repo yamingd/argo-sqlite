@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
 
-
 android {
     compileSdkVersion 21
     buildToolsVersion "21.1.0"
@@ -44,6 +43,36 @@ android {
             aidl.srcDirs = ['src/main']
         }
     }
+
+}
+
+ext {
+    uploadArchive=true
+    artifactId = 'sqlite-mapper'
+}
+
+version = '1.0.0'
+
+task androidJavadocs(type: Javadoc) {
+    source = android.sourceSets.main.java
+}
+
+task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    classifier = 'javadoc'
+    //basename = artifact_id
+    from androidJavadocs.destinationDir
+}
+
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    //basename = artifact_id
+    from android.sourceSets.main.java
+}
+
+artifacts {
+    //archives packageReleaseJar
+    archives androidSourcesJar
+    archives androidJavadocsJar
 }
 
 dependencies {
@@ -51,3 +80,6 @@ dependencies {
     compile 'com.android.support:support-v4:21.0.0'
     compile 'com.jakewharton.timber:timber:3.1.0'
 }
+
+
+apply from: '../maven_push.gradle'
