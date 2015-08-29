@@ -1865,7 +1865,7 @@ public class SQLiteDatabase extends SQLiteClosable {
      * @throws SQLException If the SQL string is invalid for some reason
      * @throws IllegalStateException if the database is not open
      */
-    public int delete(String table, String whereClause, String[] whereArgs) {
+    public int delete(String table, String whereClause, Object[] whereArgs) {
         lock();
         if (!isOpen()) {
             throw new IllegalStateException("database not open");
@@ -2075,7 +2075,7 @@ public class SQLiteDatabase extends SQLiteClosable {
      * @throws SQLException If the SQL string is invalid for some reason
      * @throws IllegalStateException if the database is not open
      */
-    public void execSQL(String sql, Object[] bindArgs) throws SQLException {
+    public int execSQL(String sql, Object[] bindArgs) throws SQLException {
         if (bindArgs == null) {
             throw new IllegalArgumentException("Empty bindArgs");
         }
@@ -2084,6 +2084,7 @@ public class SQLiteDatabase extends SQLiteClosable {
         if (!isOpen()) {
             throw new IllegalStateException("database not open");
         }
+        int ret = 0;
         SQLiteStatement statement = null;
         try {
             statement = compileStatement(sql);
@@ -2093,7 +2094,11 @@ public class SQLiteDatabase extends SQLiteClosable {
                     DatabaseUtils.bindObjectToProgram(statement, i + 1, bindArgs[i]);
                 }
             }
-            statement.execute();
+            if (sql.startsWith("update ") || sql.startsWith("delete ")){
+                ret = statement.executeUpdateDelete();
+            }else {
+                statement.execute();
+            }
         } catch (SQLiteDatabaseCorruptException e) {
             onCorruption();
             throw e;
@@ -2104,6 +2109,7 @@ public class SQLiteDatabase extends SQLiteClosable {
             unlock();
         }
         logTimeStat(sql, timeStart);
+        return ret;
     }
 
     @Override

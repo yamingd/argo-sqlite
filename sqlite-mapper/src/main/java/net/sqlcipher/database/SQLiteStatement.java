@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import timber.log.Timber;
+
 /**
  * A pre-compiled statement against a {@link SQLiteDatabase} that can be reused.
  * The statement cannot return multiple rows, but 1x1 result sets are allowed.
@@ -202,6 +204,7 @@ public class SQLiteStatement extends SQLiteProgram
                 Object item = list.get(i);
                 binder.bind(this, item);
                 native_execute();
+//                Timber.d("natvie_execute. " + System.currentTimeMillis());
             }
 
             mDatabase.logTimeStat(mSql, timeStart);
@@ -252,6 +255,7 @@ public class SQLiteStatement extends SQLiteProgram
                 Object item = iterator.next();
                 binder.bind(this, item);
                 native_execute();
+                //Timber.d("natvie_execute. " + System.currentTimeMillis());
             }
 
             mDatabase.logTimeStat(mSql, timeStart);

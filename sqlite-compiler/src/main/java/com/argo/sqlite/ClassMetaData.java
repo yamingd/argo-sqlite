@@ -21,7 +21,6 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
@@ -374,8 +373,8 @@ public class ClassMetaData {
     }
 
     public String getFieldTypeName(VariableElement element) {
+        Utils.note("getFieldTypeName: " + element);
         final TypeMirror typeMirror = element.asType();
-        Utils.note("getFieldTypeName: " + element + ", " + typeMirror);
 
         final String typeName = typeMirror.accept(new SimpleTypeVisitor7<String, Void>() {
             @Override public String visitPrimitive(PrimitiveType t, Void p) {
@@ -388,17 +387,10 @@ public class ClassMetaData {
                 return e.getSimpleName().toString();
             }
 
-            @Override
-            public String visitArray(ArrayType t, Void aVoid) {
-                return typeMirror.toString();
-            }
-
         }, null);
-
         if (typeName == null){
             return typeMirror.toString();
         }
-
         return typeName;
     }
 

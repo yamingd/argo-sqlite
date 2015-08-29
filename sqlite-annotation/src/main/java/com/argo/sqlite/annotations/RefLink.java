@@ -14,7 +14,7 @@ public @interface RefLink {
 
     /**
      * Ref Column
-     * @return
+     * @return String
      */
     String on() default "";
 }

@@ -14,13 +14,13 @@ public @interface Table {
 
     /**
      * Table Name
-     * @return
+     * @return String
      */
     String value() default "";
 
     /**
      * Database Tag
-     * @return
+     * @return String
      */
     String context() default "default";
 }

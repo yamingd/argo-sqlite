@@ -1,11 +1,13 @@
 package com.argo.sqlite;
 
 import net.sqlcipher.database.SQLiteDatabase;
+import net.sqlcipher.database.SQLiteTransactionListener;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.Date;
 
 import timber.log.Timber;
 
@@ -61,7 +63,7 @@ public class SqliteContext {
         }
 
         File path = new File(this.path, name + SUFFIX);
-        Timber.d("getDbFolder: %s", path);
+        //Timber.d("getDbFolder: %s", path);
 
         try {
             if (path.exists()){
@@ -99,8 +101,8 @@ public class SqliteContext {
         File path = getDbFolder(name);
         if (database == null) {
             char[] secret = getChars(this.salt);
-            database = SQLiteDatabase.openOrCreateDatabase(path.getAbsolutePath(), "abc123", null);
-            Timber.d("db version: %s(%s)", path, database.getVersion());
+            database = SQLiteDatabase.openOrCreateDatabase(path.getAbsolutePath(), secret, null);
+            Timber.d("open db version: %s(%s)", path, database.getVersion());
         }
     }
 
@@ -162,24 +164,39 @@ public class SqliteContext {
      * 更新时使用事务管理
      * @param block
      */
-    public void update(SqliteBlock<SQLiteDatabase> block){
-        long ts = System.currentTimeMillis();
+    public synchronized void update(SqliteBlock<SQLiteDatabase> block){
+        final long ts = System.currentTimeMillis();
         ensureDbOpen();
         boolean error = false;
         try {
-            Timber.d("update db: %s", database.getPath());
-            this.database.beginTransaction();
+            Timber.d("db-%s update: %s", getTag(), database.getPath());
+            this.database.beginTransactionWithListener(new SQLiteTransactionListener() {
+                @Override
+                public void onBegin() {
+                    Timber.d("db-%s Transaction begin: %s", getTag(), new Date());
+                }
+
+                @Override
+                public void onCommit() {
+                    Timber.d("db-%s Transaction commit: %s", getTag(), new Date());
+                }
+
+                @Override
+                public void onRollback() {
+                    Timber.d("db-%s Transaction rollback: %s", getTag(), new Date());
+                }
+            });
             block.execute(this.database);
         } catch (Exception e) {
             error = true;
-            Timber.e(e, "update Error.");
+            Timber.e(e, "update Error. db-%s", getTag());
         }finally {
             if (!error){
                 this.database.setTransactionSuccessful();
             }
             this.database.endTransaction();
-            ts = System.currentTimeMillis() - ts;
-            Timber.d("update complete duration: %s ms", ts);
+            long ts0 = System.currentTimeMillis() - ts;
+            Timber.d("db-%s update complete duration: %s ms", getTag(), ts0);
         }
     }
 
@@ -190,10 +207,10 @@ public class SqliteContext {
     public void query(SqliteBlock<SQLiteDatabase> block){
         ensureDbOpen();
         try {
-            Timber.d("query db: %s", database.getPath());
+            Timber.d("db-%s query: %s", getTag(), database.getPath());
             block.execute(this.database);
         } catch (Exception e) {
-            Timber.e(e, "query Error.");
+            Timber.e(e, "query Error. db-%s", getTag());
         }
     }
 
@@ -202,7 +219,9 @@ public class SqliteContext {
      */
     public void close(){
         if (database != null){
+            Timber.d("db-%s close: %s", getTag(), database.getPath());
             database.close();
+            SQLiteDatabase.releaseMemory();
             database = null;
         }
     }

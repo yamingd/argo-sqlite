@@ -51,6 +51,7 @@ public class SqliteMapperClassGenerator {
     ClassName hashSetType = ClassName.get("java.util", "HashSet");
     ClassName listType = ClassName.get("java.util", "List");
     ClassName iteratorType = ClassName.get("java.util", "Iterator");
+    ClassName timberType = ClassName.get("timber.log", "Timber");
 
     private String typeStringName = "java.lang.String";
 
@@ -204,7 +205,6 @@ public class SqliteMapperClassGenerator {
             final String getter = this.metadata.getGetter(filedName);
 
             Utils.note("typeName:" + typeName + ", bind: " + bind + ", getter: " + getter);
-
             if (typeName.equalsIgnoreCase("date")){
                 method.addStatement("statement.$N($N, getDate(o.$N()))", bind, bindIndex + "", getter);
             }else if(typeName.equalsIgnoreCase("boolean")){
@@ -373,7 +373,7 @@ public class SqliteMapperClassGenerator {
 
             varName = "refVar" + i;
             boolean isList = false;
-            save.addStatement("// save $N", name);
+            save.addStatement("$T.d($S)", timberType, name);
 
             TypeName targetTypeName = TypeName.get(e);
             TypeName varTypeName = TypeName.get(e);

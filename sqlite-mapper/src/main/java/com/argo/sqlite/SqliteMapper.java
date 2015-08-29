@@ -736,6 +736,8 @@ public abstract class SqliteMapper<T, PKType> {
         Cursor cursor = database.rawQuery(s.toString(), params);
         List<T> list = loadRecords(cursor);
 
+//        Timber.d("selectLimit:%s",s.toString());
+
         return list;
 
     }
@@ -826,11 +828,13 @@ public abstract class SqliteMapper<T, PKType> {
      * @param where
      * @param params
      */
-    public void update(String value, String where, Object[] params){
+    public int update(String value, String where, Object[] params){
         SQLiteDatabase database = this.getDatabase();
         StringBuilder s = new StringBuilder(UPDATE).append(this.getTableName()).append(SET);
         s.append(value).append(S_EMPTY).append(WHERE).append(where);
-        database.execSQL(s.toString(), params);
+        int ret = database.execSQL(s.toString(), params);
+        Timber.d("update:" + s.toString());
+        return ret;
     }
 
     /**
@@ -838,9 +842,9 @@ public abstract class SqliteMapper<T, PKType> {
      * @param where
      * @param params
      */
-    public void delete(String where, Object[] params){
+    public int delete(String where, Object[] params){
         SQLiteDatabase database = this.getDatabase();
-        StringBuilder s = new StringBuilder(DELETE_FROM).append(this.getTableName()).append(WHERE).append(where);
-        database.execSQL(s.toString(), params);
+        int ret = database.delete(this.getTableName(), where, params);
+        return ret;
     }
 }

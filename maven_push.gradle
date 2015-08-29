@@ -34,7 +34,8 @@ afterEvaluate { project ->
 
                     beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-                    pom.artifactId = project.artifactId
+                    pom.groupId = POM_GROUP
+                    pom.artifactId = POM_ARTIFACT_ID
 
                     repository(url: sonatypeRepositoryUrl) {
                         authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())

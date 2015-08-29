@@ -40,11 +40,12 @@ android {
             manifest.srcFile 'src/main/AndroidManifest.xml'
             java.srcDirs = ['src/main/java']
             resources.srcDirs = ['src/main/java']
-            aidl.srcDirs = ['src/main']
+            aidl.srcDirs = ['src/main/java']
         }
     }
 
 }
+
 
 ext {
     uploadArchive=true
@@ -53,26 +54,32 @@ ext {
 
 version = '1.0.0'
 
-task androidJavadocs(type: Javadoc) {
-    source = android.sourceSets.main.java
-}
-
-task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
-    classifier = 'javadoc'
-    //basename = artifact_id
-    from androidJavadocs.destinationDir
-}
-
-task androidSourcesJar(type: Jar) {
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
     classifier = 'sources'
-    //basename = artifact_id
-    from android.sourceSets.main.java
 }
 
+task javadoc(type: Javadoc) {
+    source = []
+//    source = android.sourceSets.main.java.srcDirs
+//    File aidlgen = new File(project.buildDir, 'generated/source/aidl/debug')
+//    classpath += project.files(android.getBootClasspath().join(File.pathSeparator), configurations.compile, aidlgen)
+//    title = null
+//    options.doclet = 'com.google.doclava.Doclava'
+//    options.docletpath = [new File(new File(project.projectDir, "libs"), "doclava-1.0.6.jar")]
+//    options.encoding = 'UTF-8'
+//    exclude {
+//        it.file.name.endsWith('.aidl')
+//    }
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
 artifacts {
-    //archives packageReleaseJar
-    archives androidSourcesJar
-    archives androidJavadocsJar
+    archives javadocJar
+    archives sourcesJar
 }
 
 dependencies {
