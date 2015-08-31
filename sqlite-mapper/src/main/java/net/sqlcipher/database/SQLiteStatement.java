@@ -22,8 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import timber.log.Timber;
-
 /**
  * A pre-compiled statement against a {@link SQLiteDatabase} that can be reused.
  * The statement cannot return multiple rows, but 1x1 result sets are allowed.
@@ -62,7 +60,7 @@ public class SQLiteStatement extends SQLiteProgram
         acquireReference();
         try {
             native_execute();
-            mDatabase.logTimeStat(mSql, timeStart);
+            mDatabase.logTimeStat(mSql, timeStart, -1);
         } finally {
             releaseReference();
             mDatabase.unlock();
@@ -88,8 +86,9 @@ public class SQLiteStatement extends SQLiteProgram
         acquireReference();
         try {
             native_execute();
-            mDatabase.logTimeStat(mSql, timeStart);
-            return (mDatabase.lastChangeCount() > 0) ? mDatabase.lastInsertRow() : -1;
+            long ret = (mDatabase.lastChangeCount() > 0) ? mDatabase.lastInsertRow() : -1;
+            mDatabase.logTimeStat(mSql, timeStart, ret);
+            return ret;
         } finally {
             releaseReference();
             mDatabase.unlock();
@@ -106,7 +105,7 @@ public class SQLiteStatement extends SQLiteProgram
         acquireReference();
         try {
             native_execute();
-            mDatabase.logTimeStat(mSql, timeStart);
+            mDatabase.logTimeStat(mSql, timeStart, -1);
             return mDatabase.lastChangeCount();
         } finally {
             releaseReference();
@@ -132,7 +131,7 @@ public class SQLiteStatement extends SQLiteProgram
         acquireReference();
         try {
             long retValue = native_1x1_long();
-            mDatabase.logTimeStat(mSql, timeStart);
+            mDatabase.logTimeStat(mSql, timeStart, -1);
             return retValue;
         } finally {
             releaseReference();
@@ -158,7 +157,7 @@ public class SQLiteStatement extends SQLiteProgram
         acquireReference();
         try {
             String retValue = native_1x1_string();
-            mDatabase.logTimeStat(mSql, timeStart);
+            mDatabase.logTimeStat(mSql, timeStart, -1);
             return retValue;
         } finally {
             releaseReference();
@@ -182,7 +181,7 @@ public class SQLiteStatement extends SQLiteProgram
                 native_execute();
             }
 
-            mDatabase.logTimeStat(mSql, timeStart);
+            mDatabase.logTimeStat(mSql, timeStart, list.size());
             return mDatabase.lastChangeCount();
         } finally {
             releaseReference();
@@ -207,7 +206,7 @@ public class SQLiteStatement extends SQLiteProgram
 //                Timber.d("natvie_execute. " + System.currentTimeMillis());
             }
 
-            mDatabase.logTimeStat(mSql, timeStart);
+            mDatabase.logTimeStat(mSql, timeStart, list.size());
             return mDatabase.lastChangeCount();
         } finally {
             releaseReference();
@@ -231,9 +230,9 @@ public class SQLiteStatement extends SQLiteProgram
                 binder.bind(this, item);
                 native_execute();
             }
-
-            mDatabase.logTimeStat(mSql, timeStart);
-            return mDatabase.lastChangeCount();
+            long ret = mDatabase.lastChangeCount();
+            mDatabase.logTimeStat(mSql, timeStart, ret);
+            return ret;
         } finally {
             releaseReference();
             mDatabase.unlock();
@@ -257,9 +256,9 @@ public class SQLiteStatement extends SQLiteProgram
                 native_execute();
                 //Timber.d("natvie_execute. " + System.currentTimeMillis());
             }
-
-            mDatabase.logTimeStat(mSql, timeStart);
-            return mDatabase.lastChangeCount();
+            long ret = mDatabase.lastChangeCount();
+            mDatabase.logTimeStat(mSql, timeStart, ret);
+            return (int)ret;
         } finally {
             releaseReference();
             mDatabase.unlock();

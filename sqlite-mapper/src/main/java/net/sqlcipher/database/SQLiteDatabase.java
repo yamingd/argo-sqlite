@@ -16,12 +16,20 @@
 
 package net.sqlcipher.database;
 
-import net.sqlcipher.Cursor;
+import android.content.ContentValues;
+import android.content.Context;
+import android.os.Debug;
+import android.os.SystemClock;
+import android.text.TextUtils;
+import android.util.Config;
+import android.util.Log;
+import android.util.Pair;
+
 import net.sqlcipher.CrossProcessCursorWrapper;
+import net.sqlcipher.Cursor;
 import net.sqlcipher.DatabaseUtils;
 import net.sqlcipher.SQLException;
 import net.sqlcipher.database.SQLiteDebug.DbStats;
-import net.sqlcipher.database.SQLiteDatabaseHook;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,7 +38,6 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
@@ -41,16 +48,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.zip.ZipInputStream;
 
-import android.content.ContentValues;
-
-import android.content.Context;
-
-import android.os.Debug;
-import android.os.SystemClock;
-import android.text.TextUtils;
-import android.util.Config;
-import android.util.Log;
-import android.util.Pair;
+import timber.log.Timber;
 
 /**
  * Exposes methods to manage a SQLite database.
@@ -148,7 +146,7 @@ public class SQLiteDatabase extends SQLiteClosable {
             loadICUData(context, workingDir);
         }
     }
-
+    public static boolean printSQLTS = false;
     /**
      * Algorithms used in ON CONFLICT clause
      * http://www.sqlite.org/lang_conflict.html
@@ -340,7 +338,7 @@ public class SQLiteDatabase extends SQLiteClosable {
      * there will not be an overhead of compilation of sql statements by sqlite.
      *
      * why is this cache NOT static? because sqlite attaches compiledsql statements to the
-     * struct created when {@link SQLiteDatabase#openDatabase(String, CursorFactory, int)} is
+     * struct created when  is
      * invoked.
      *
      * this cache has an upper limit of mMaxSqlCacheSize (settable by calling the method
@@ -2018,7 +2016,7 @@ public class SQLiteDatabase extends SQLiteClosable {
         if (!isOpen()) {
             throw new IllegalStateException("database not open");
         }
-        logTimeStat(mLastSqlStatement, timeStart, GET_LOCK_LOG_PREFIX);
+        logTimeStat(mLastSqlStatement, timeStart, GET_LOCK_LOG_PREFIX, -1);
         try {
             native_execSQL(sql);
         } catch (SQLiteDatabaseCorruptException e) {
@@ -2032,9 +2030,9 @@ public class SQLiteDatabase extends SQLiteClosable {
         // SQL statement for disambiguation.  Note that instance
         // equality to COMMIT_SQL is safe here.
         if (sql == COMMIT_SQL) {
-            logTimeStat(mLastSqlStatement, timeStart, COMMIT_SQL);
+            logTimeStat(mLastSqlStatement, timeStart, COMMIT_SQL, -1);
         } else {
-            logTimeStat(sql, timeStart, null);
+            logTimeStat(sql, timeStart, null, -1);
         }
     }
 
@@ -2044,7 +2042,7 @@ public class SQLiteDatabase extends SQLiteClosable {
         if (!isOpen()) {
             throw new IllegalStateException("database not open");
         }
-        logTimeStat(mLastSqlStatement, timeStart, GET_LOCK_LOG_PREFIX);
+        logTimeStat(mLastSqlStatement, timeStart, GET_LOCK_LOG_PREFIX, -1);
         try {
             native_rawExecSQL(sql);
         } catch (SQLiteDatabaseCorruptException e) {
@@ -2058,9 +2056,9 @@ public class SQLiteDatabase extends SQLiteClosable {
         // SQL statement for disambiguation.  Note that instance
         // equality to COMMIT_SQL is safe here.
         if (sql == COMMIT_SQL) {
-            logTimeStat(mLastSqlStatement, timeStart, COMMIT_SQL);
+            logTimeStat(mLastSqlStatement, timeStart, COMMIT_SQL, -1);
         } else {
-            logTimeStat(sql, timeStart, null);
+            logTimeStat(sql, timeStart, null, -1);
         }
     }
 
@@ -2108,7 +2106,7 @@ public class SQLiteDatabase extends SQLiteClosable {
             }
             unlock();
         }
-        logTimeStat(sql, timeStart);
+        logTimeStat(sql, timeStart, ret);
         return ret;
     }
 
@@ -2227,11 +2225,20 @@ public class SQLiteDatabase extends SQLiteClosable {
         return mPath;
     }
 
+
     /* package */ void logTimeStat(String sql, long beginMillis) {
-        logTimeStat(sql, beginMillis, null);
+        logTimeStat(sql, beginMillis, null, -1);
     }
 
     /* package */ void logTimeStat(String sql, long beginMillis, String prefix) {
+        logTimeStat(sql, beginMillis, prefix, -1);
+    }
+
+    /* package */ void logTimeStat(String sql, long beginMillis, long changedCount) {
+        logTimeStat(sql, beginMillis, null, changedCount);
+    }
+
+    /* package */ void logTimeStat(String sql, long beginMillis, String prefix, long changedCount) {
         // Keep track of the last statement executed here, as this is
         // the common funnel through which all methods of hitting
         // libsqlite eventually flow.
@@ -2278,14 +2285,9 @@ public class SQLiteDatabase extends SQLiteClosable {
         String blockingPackage = "unknown";//ActivityThread.currentPackageName();
         if (blockingPackage == null) blockingPackage = "";
 
-        /*
-          EventLog.writeEvent(
-          EVENT_DB_OPERATION,
-          getPathForLogs(),
-          sql,
-          durationMillis,
-          blockingPackage,
-          samplePercent);*/
+        if (printSQLTS) {
+            Timber.i("SQL Log, ts=%d ms, total=%s \n %s", EVENT_DB_OPERATION, durationMillis, changedCount, sql);
+        }
     }
 
     /**
