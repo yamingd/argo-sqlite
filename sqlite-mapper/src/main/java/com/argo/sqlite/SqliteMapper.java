@@ -34,6 +34,7 @@ public abstract class SqliteMapper<T, PKType> {
     public static final String SET = " set ";
     public static final String S_EMPTY = " ";
     public static final String STRING_NULL = "";
+    public static final String DESC = " desc ";
 
     protected SqliteContext dbContext;
 
@@ -691,7 +692,7 @@ public abstract class SqliteMapper<T, PKType> {
     public List<T> select(String where, String[] params){
 
         StringBuilder s = new StringBuilder(SELECT).append(getSelectFields()).append(FROM).append(this.getTableName());
-        s.append(WHERE).append(where).append(ORDER_BY).append(this.getPkColumn()).append(" desc ");
+        s.append(WHERE).append(where).append(ORDER_BY).append(this.getPkColumn()).append(DESC);
 
         SQLiteDatabase database = this.getDatabase();
         Cursor cursor = database.rawQuery(s.toString(), params);

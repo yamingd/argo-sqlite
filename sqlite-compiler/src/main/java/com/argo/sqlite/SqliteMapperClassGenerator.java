@@ -169,7 +169,7 @@ public class SqliteMapperClassGenerator {
             s.append(", ");
         }
         s.setLength(s.length() - 2);
-        s.append(" );");
+        s.append(" ) WITHOUT ROWID ;");
 
         return s.toString();
     }

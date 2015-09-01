@@ -48,8 +48,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.zip.ZipInputStream;
 
-import timber.log.Timber;
-
 /**
  * Exposes methods to manage a SQLite database.
  * <p>SQLiteDatabase has methods to create, delete, execute SQL commands, and
@@ -2285,9 +2283,9 @@ public class SQLiteDatabase extends SQLiteClosable {
         String blockingPackage = "unknown";//ActivityThread.currentPackageName();
         if (blockingPackage == null) blockingPackage = "";
 
-        if (printSQLTS) {
-            Timber.i("SQL Log, ts=%d ms, total=%s \n %s", EVENT_DB_OPERATION, durationMillis, changedCount, sql);
-        }
+//        if (printSQLTS) {
+//            Timber.i("SQL Log, ts=%d ms, total=%s \n %s", EVENT_DB_OPERATION, durationMillis, changedCount, sql);
+//        }
     }
 
     /**

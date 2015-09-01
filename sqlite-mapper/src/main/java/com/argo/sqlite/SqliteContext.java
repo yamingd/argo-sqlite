@@ -1,6 +1,9 @@
 package com.argo.sqlite;
 
+import android.content.Context;
+
 import net.sqlcipher.database.SQLiteDatabase;
+import net.sqlcipher.database.SQLiteException;
 import net.sqlcipher.database.SQLiteTransactionListener;
 
 import java.io.File;
@@ -18,6 +21,9 @@ public class SqliteContext {
 
     public static final String SQLITE_TAG_DEFAULT = "default";
     public static final String SUFFIX = ".db";
+    public static final String DATABASE_IS_LOCKED = "database is locked";
+
+    private Context context;
 
     private File path;
     private String tag;
@@ -28,13 +34,24 @@ public class SqliteContext {
 
     private SQLiteDatabase database;
 
+    public SqliteContext(Context context, byte[] salt) {
+        File file = context.getDatabasePath("dump");
+        this.context = context;
+        this.tag = SQLITE_TAG_DEFAULT;
+        this.name = null;
+        this.originalName = name;
+        this.salt = salt;
+        this.path = file.getParentFile();
+    }
 
-    public SqliteContext(String name, File path, byte[] salt) {
+    public SqliteContext(Context context, String name, byte[] salt) {
+        File file = context.getDatabasePath("dump");
+        this.context = context;
         this.tag = SQLITE_TAG_DEFAULT;
         this.name = name;
         this.originalName = name;
         this.salt = salt;
-        this.path = path;
+        this.path = file.getParentFile();
     }
 
     public String getTag() {
@@ -54,6 +71,9 @@ public class SqliteContext {
     }
 
     public SQLiteDatabase getDatabase() {
+        if (database == null){
+            ensureDbOpen();
+        }
         return database;
     }
 
@@ -102,6 +122,7 @@ public class SqliteContext {
         if (database == null) {
             char[] secret = getChars(this.salt);
             database = SQLiteDatabase.openOrCreateDatabase(path.getAbsolutePath(), secret, null);
+            database.setLockingEnabled(true);
             Timber.d("open db version: %s(%s)", path, database.getVersion());
         }
     }
@@ -116,12 +137,13 @@ public class SqliteContext {
     }
 
     public void ensureDbOpen(){
-        if (null == name){
-            name = "user_" + this.getUserId();
-        }
 
         if (database != null){
             return;
+        }
+
+        if (null == name){
+            name = "user_" + this.getUserId();
         }
 
         open(name);
@@ -169,25 +191,23 @@ public class SqliteContext {
         ensureDbOpen();
         boolean error = false;
         try {
-            Timber.d("db-%s update: %s", getTag(), database.getPath());
-            this.database.beginTransactionWithListener(new SQLiteTransactionListener() {
-                @Override
-                public void onBegin() {
-                    Timber.d("db-%s Transaction begin: %s", getTag(), new Date());
-                }
+            executeBlock(block);
+        }catch (SQLiteException e){
+            //net.sqlcipher.database.SQLiteException: error code 5: database is locked
+            if (e.getMessage().contains(DATABASE_IS_LOCKED)){
+                this.database.endTransaction();
 
-                @Override
-                public void onCommit() {
-                    Timber.d("db-%s Transaction commit: %s", getTag(), new Date());
-                }
+                foreceCloseWhenLocked();
 
-                @Override
-                public void onRollback() {
-                    Timber.d("db-%s Transaction rollback: %s", getTag(), new Date());
+                try {
+                    executeBlock(block);
+                } catch (Exception e1) {
+                    error = true;
+                    Timber.e(e, "update Error. db-%s", getTag());
                 }
-            });
-            block.execute(this.database);
-        } catch (Exception e) {
+            }
+        }
+        catch (Exception e) {
             error = true;
             Timber.e(e, "update Error. db-%s", getTag());
         }finally {
@@ -196,8 +216,44 @@ public class SqliteContext {
             }
             this.database.endTransaction();
             long ts0 = System.currentTimeMillis() - ts;
-            Timber.d("db-%s update complete duration: %s ms", getTag(), ts0);
+            Timber.i("db-%s update complete duration: %s ms", getTag(), ts0);
         }
+
+    }
+
+    private synchronized void foreceCloseWhenLocked(){
+        Timber.e("foreceCloseWhenLocked");
+
+        this.close();
+
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e1) {
+
+        }
+
+        this.reopen();
+    }
+
+    public void executeBlock(SqliteBlock<SQLiteDatabase> block) throws Exception{
+        Timber.d("%s db-%s update: %s", this, getTag(), database.getPath());
+        this.database.beginTransactionWithListener(new SQLiteTransactionListener() {
+            @Override
+            public void onBegin() {
+                Timber.d("%s db-%s Transaction begin: %s", this, getTag(), new Date());
+            }
+
+            @Override
+            public void onCommit() {
+                Timber.d("%s db-%s Transaction commit: %s", this, getTag(), new Date());
+            }
+
+            @Override
+            public void onRollback() {
+                Timber.d("%s db-%s Transaction rollback: %s", this, getTag(), new Date());
+            }
+        });
+        block.execute(this.database);
     }
 
     /**
@@ -217,7 +273,7 @@ public class SqliteContext {
     /**
      * 关闭
      */
-    public void close(){
+    public synchronized void close(){
         if (database != null){
             Timber.d("db-%s close: %s", getTag(), database.getPath());
             database.close();
@@ -229,7 +285,7 @@ public class SqliteContext {
     /**
      * 重新打开
      */
-    public void reopen(){
+    public synchronized void reopen(){
         close();
         this.name = this.originalName;
         ensureDbOpen();
