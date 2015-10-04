@@ -14,9 +14,10 @@ compileTestJava {
 ext{
     uploadArchive=true
     artifactId = 'sqlite-compiler'
+    groupId = 'com.github.yamingd.android'
 }
 
-version = '1.0.0'
+version = '2.0.0'
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
@@ -36,7 +37,7 @@ artifacts {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile project(':sqlite-annotation')
+    compile 'com.github.yamingd.android:sqlite-annotation:1.1.0'
 }
 
 apply from: '../maven_push.gradle'

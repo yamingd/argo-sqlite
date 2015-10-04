@@ -47,6 +47,8 @@ public class SqliteMapperClassGenerator {
     private String mapperClassName;
     private ClassName mapperTypeName;
 
+    ClassName mapType = ClassName.get("java.util", "Map");
+    ClassName arrayMap = ClassName.get("android.support.v4.util", "ArrayMap");
     ClassName setType = ClassName.get("java.util", "Set");
     ClassName hashSetType = ClassName.get("java.util", "HashSet");
     ClassName listType = ClassName.get("java.util", "List");
@@ -109,11 +111,9 @@ public class SqliteMapperClassGenerator {
         bufferedWriter.close();
     }
 
-    static final String N_columns = "columns";
     static final String N_pkColumn = "pkColumn";
     static final String N_tableName = "tableName";
     static final String N_dbContextTag = "dbContextTag";
-    static final String N_tableCreateSql = "tableCreateSql";
     static final String N_instance = "instance";
 
     /**
@@ -123,26 +123,14 @@ public class SqliteMapperClassGenerator {
 
         ListTypeName listTypeName = ListTypeName.of(String.class);
 
-        builder.addField(listTypeName, N_columns, Modifier.PRIVATE, Modifier.STATIC);
         builder.addField(String.class, N_pkColumn, Modifier.PRIVATE, Modifier.STATIC);
         builder.addField(String.class, N_tableName, Modifier.PRIVATE, Modifier.STATIC);
-        builder.addField(String.class, N_tableCreateSql, Modifier.PRIVATE, Modifier.STATIC);
         builder.addField(String.class, N_dbContextTag, Modifier.PUBLIC, Modifier.STATIC);
         builder.addField(mapperTypeName, N_instance, Modifier.PUBLIC, Modifier.STATIC);
     }
 
     private void addStaticInitCodes(){
         CodeBlock.Builder block = CodeBlock.builder();
-
-        ClassName className = ClassName.get("java.util", "ArrayList");
-        ParameterizedTypeName listOf = ParameterizedTypeName.get(className, TypeName.get(String.class));
-
-        block.addStatement("$N = new $T()", N_columns, listOf);
-
-        List<String> list = this.metadata.getFieldNames();
-        for (int i = 0; i < list.size(); i++) {
-            block.addStatement("$N.add($S)", "columns", list.get(i));
-        }
 
         block.addStatement("$N = $S", N_pkColumn, this.metadata.getPrimaryKey().getSimpleName());
         block.addStatement("$N = $S", N_tableName, this.metadata.getTableAnnotation().value());
@@ -222,17 +210,53 @@ public class SqliteMapperClassGenerator {
 
     private void addInheritGetter(){
 
+        //1.
+
+        String N_columns = "columns";
         ListTypeName listTypeName = ListTypeName.of(String.class);
-        MethodSpec getColumns = MethodSpec.methodBuilder("getColumns")
+        MethodSpec.Builder getColumns = MethodSpec.methodBuilder("getColumns")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
-                .returns(listTypeName)
-                .addStatement("return $N", N_columns)
-                .build();
+                .returns(listTypeName);
+
+        ClassName className = ClassName.get("java.util", "ArrayList");
+        ParameterizedTypeName listOf = ParameterizedTypeName.get(className, TypeName.get(String.class));
+        getColumns.addStatement("$T $N = new $T()", listTypeName, N_columns, listOf);
+
+        List<String> fieldNames = this.metadata.getFieldNames();
+        for (int i = 0; i < fieldNames.size(); i++) {
+            getColumns.addStatement("$N.add($S)", N_columns, fieldNames.get(i));
+        }
+
+        getColumns.addStatement("return $N", N_columns);
 
 
-        builder.addMethod(getColumns);
+        builder.addMethod(getColumns.build());
 
+        //2. getColumnInfo
+
+        MapTypeName mapTypeName = new MapTypeName(mapType, TypeName.get(String.class), TypeName.get(String.class));
+        MapTypeName arraymapTypeName = new MapTypeName(arrayMap, TypeName.get(String.class), TypeName.get(String.class));
+
+        MethodSpec.Builder getColumnInfo = MethodSpec.methodBuilder("getColumnInfo")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(Override.class)
+                .returns(mapTypeName);
+
+        getColumnInfo.addStatement("$T $N = new $T()", mapTypeName, N_columns, arraymapTypeName);
+
+        for (int i = 0; i < fieldNames.size(); i++) {
+            final String typeName = this.metadata.getFieldTypeName(i);
+            getColumnInfo.addStatement("$N.put($S, $S)", N_columns, fieldNames.get(i), Constants.JAVA_TO_SQLITE_TYPES.get(typeName));
+        }
+
+        getColumnInfo.addStatement("return $N", N_columns);
+
+
+        builder.addMethod(getColumnInfo.build());
+
+
+        //2.
         MethodSpec getPkColumn = MethodSpec.methodBuilder("getPkColumn")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
@@ -243,6 +267,7 @@ public class SqliteMapperClassGenerator {
 
         builder.addMethod(getPkColumn);
 
+        //3.
         MethodSpec getTableName = MethodSpec.methodBuilder("getTableName")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
@@ -253,6 +278,7 @@ public class SqliteMapperClassGenerator {
 
         builder.addMethod(getTableName);
 
+        //4.
         MethodSpec getClassType = MethodSpec.methodBuilder("getClassType")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
@@ -263,6 +289,7 @@ public class SqliteMapperClassGenerator {
 
         builder.addMethod(getClassType);
 
+        //5.
         MethodSpec getDbContextTag = MethodSpec.methodBuilder("getDbContextTag")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
@@ -272,6 +299,17 @@ public class SqliteMapperClassGenerator {
 
 
         builder.addMethod(getDbContextTag);
+
+        MethodSpec.Builder getTableCreateSql = MethodSpec.methodBuilder("getTableCreateSql")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(Override.class)
+                .returns(String.class);
+
+        getTableCreateSql.addStatement("String sql = $S", this.buildCreateTableSql());
+        getTableCreateSql.addStatement("return sql");
+
+
+        builder.addMethod(getTableCreateSql.build());
     }
 
     private void addPrepareMethod(){
@@ -281,12 +319,9 @@ public class SqliteMapperClassGenerator {
                 .addAnnotation(Override.class);
 
         prepare.addStatement("super.prepare()");
-        prepare.addStatement("$N = $S", N_tableCreateSql, this.buildCreateTableSql());
-        prepare.addStatement("this.dbContext.createTable($N)", N_tableCreateSql);
-        prepare.addStatement("$N = $S", N_tableCreateSql, null);
+        prepare.addStatement("this.dbContext.initTable(this)");
 
         builder.addMethod(prepare.build());
-
     }
 
 

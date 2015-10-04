@@ -13,18 +13,16 @@ import java.lang.annotation.Target;
 public @interface Column {
 
     /**
-     * if this column is primary key
-     * @return Boolean
+     * @return boolean
      */
     boolean pk() default false;
     /**
-     * Column's Name
+     *
      * @return String
      */
     String name() default "";
 
     /**
-     * Generate database index for this column
      * @return boolean
      */
     boolean index() default false;

@@ -1,7 +1,9 @@
 package com.argo.sqlite;
 
 import android.content.Context;
+import android.support.v4.util.ArrayMap;
 
+import net.sqlcipher.Cursor;
 import net.sqlcipher.database.SQLiteDatabase;
 import net.sqlcipher.database.SQLiteException;
 import net.sqlcipher.database.SQLiteTransactionListener;
@@ -11,6 +13,8 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 
 import timber.log.Timber;
 
@@ -68,6 +72,7 @@ public class SqliteContext {
 
     public void setUserId(String userId) {
         this.userId = userId;
+        name = "user_" + this.getUserId();
     }
 
     public SQLiteDatabase getDatabase() {
@@ -149,11 +154,68 @@ public class SqliteContext {
         open(name);
     }
 
+    private Map<String, Map<String, Boolean>> tables = null;
+    /**
+     * 列出表结构和列
+     * @return
+     */
+    public synchronized Map<String, Map<String, Boolean>> getTables(){
+        if (null != tables){
+            return tables;
+        }
+
+        ensureDbOpen();
+        tables = new ArrayMap<>();
+        String sql = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
+        Cursor cursor = this.database.rawQuery(sql, null);
+        while (cursor.moveToNext()){
+            String name = cursor.getString(0);
+            tables.put(name, new ArrayMap<String, Boolean>());
+        }
+        cursor.close();
+        final String format = "PRAGMA table_info('%s')";
+        Set<Map.Entry<String, Map<String, Boolean>>> sets = tables.entrySet();
+        for (Map.Entry<String, Map<String, Boolean>> item : sets){
+            String name = item.getKey();
+            sql = String.format(format, name);
+            cursor = this.database.rawQuery(sql, null);
+            while (cursor.moveToNext()){
+                item.getValue().put(cursor.getString(1), true);
+            }
+            cursor.close();
+        }
+        return tables;
+    }
+
+    /**
+     * 读取某个表的字段
+     * @param table
+     * @return
+     */
+    public Map<String, Boolean> getTableColumns(String table){
+        if (null == tables){
+            getTables();
+        }
+        return tables.get(table);
+    }
+
+    /**
+     *
+     */
+    public void clearTables(){
+        if (tables == null){
+            return;
+        }
+
+        tables.clear();
+        tables = null;
+    }
+
     /**
      * 新建表
      * @param sql
      */
-    public void createTable(String sql){
+    public synchronized void createTable(String sql){
         ensureDbOpen();
         this.database.rawExecSQL(sql);
         int v = this.database.getVersion();
@@ -161,12 +223,38 @@ public class SqliteContext {
     }
 
     /**
-     * 更新表
-     * @param sql
+     * 初始化表
+     * @param mapper
      */
-    public void upgradeTable(String sql){
+    public synchronized void initTable(SqliteMapper mapper){
+        String tableName = mapper.getTableName();
+        final Map<String, Boolean> columns = this.getTableColumns(tableName);
+        if (columns == null || columns.size() == 0) {
+            String sql = mapper.getTableCreateSql();
+            this.createTable(sql);
+        }else{
+            this.alterTable(tableName, mapper.getColumnInfo(), columns.keySet());
+        }
+    }
+
+    /**
+     * 更新表
+     * @param columns
+     */
+    public synchronized void alterTable(String tableName, Map<String, String> columns, Set<String> oldColumns){
         ensureDbOpen();
-        this.database.rawExecSQL(sql);
+        final String sql = "alter table %s add column %s %s";
+        for (String name : oldColumns){
+            columns.remove(name);
+        }
+        Set<Map.Entry<String, String>> itors = columns.entrySet();
+        if (itors.size() == 0){
+            return;
+        }
+
+        for (Map.Entry<String, String> itor : itors){
+            this.database.rawExecSQL(String.format(sql, tableName, itor.getKey(), itor.getValue()));
+        }
         int v = this.database.getVersion();
         this.database.setVersion(v + 1);
     }
@@ -260,13 +348,17 @@ public class SqliteContext {
      *
      * @param block
      */
-    public void query(SqliteBlock<SQLiteDatabase> block){
+    public void query(String tag, SqliteBlock<SQLiteDatabase> block){
+        final long ts = System.currentTimeMillis();
         ensureDbOpen();
         try {
-            Timber.d("db-%s query: %s", getTag(), database.getPath());
+            Timber.d("db-%s query: %s, %s", getTag(), database.getPath(), tag);
             block.execute(this.database);
         } catch (Exception e) {
-            Timber.e(e, "query Error. db-%s", getTag());
+            Timber.e(e, "query Error. db-%s, %s", getTag(), tag);
+        }finally {
+            long ts0 = System.currentTimeMillis() - ts;
+            Timber.i("db-%s query complete duration: %s ms, tag: %s", getTag(), ts0, tag);
         }
     }
 
@@ -289,5 +381,16 @@ public class SqliteContext {
         close();
         this.name = this.originalName;
         ensureDbOpen();
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer("SqliteContext{");
+        sb.append("path=").append(path);
+        sb.append(", tag='").append(tag).append('\'');
+        sb.append(", userId='").append(userId).append('\'');
+        sb.append(", name='").append(name).append('\'');
+        sb.append('}');
+        return sb.toString();
     }
 }

@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import timber.log.Timber;
@@ -129,6 +130,12 @@ public abstract class SqliteMapper<T, PKType> {
     public abstract List<String> getColumns();
 
     /**
+     * 获取字段信息、类型
+     * @return
+     */
+    public abstract Map<String, String> getColumnInfo();
+
+    /**
      * 获得主键字段名
      * @return
      */
@@ -148,9 +155,15 @@ public abstract class SqliteMapper<T, PKType> {
 
     /**
      *
-     * @return
+     * @return String
      */
     public abstract String getDbContextTag();
+
+    /**
+     *
+     * @return String
+     */
+    public abstract String getTableCreateSql();
     /**
      * 构造select字段
      * @return
@@ -167,6 +180,7 @@ public abstract class SqliteMapper<T, PKType> {
             s.setLength(s.length() - S_COMMOA.length());
 
             SELECT_FIELDS = s.toString();
+            columns.clear();
         }
 
         return SELECT_FIELDS;
@@ -198,6 +212,8 @@ public abstract class SqliteMapper<T, PKType> {
 
         SQLiteDatabase database = this.getDatabase();
         insertStatement = database.compileStatement(s.toString());
+        columns.clear();
+        s = null;
     }
 
     /**
@@ -570,6 +586,44 @@ public abstract class SqliteMapper<T, PKType> {
         Cursor cursor = database.rawQuery(s.toString(), params);
         if (cursor.moveToFirst()){
             ret = cursor.getInt(0);
+        }
+        cursor.close();
+        return ret;
+    }
+
+    /**
+     *
+     * @param where
+     * @return
+     */
+    public long max(String where, String[] params){
+        SQLiteDatabase database = this.getDatabase();
+        StringBuilder s = new StringBuilder(SELECT).append("max(").append(this.getPkColumn()).append(")")
+                .append(FROM).append(this.getTableName());
+        s.append(WHERE).append(where);
+        long ret = 0l;
+        Cursor cursor = database.rawQuery(s.toString(), params);
+        if (cursor.moveToFirst()){
+            ret = cursor.getLong(0);
+        }
+        cursor.close();
+        return ret;
+    }
+
+    /**
+     *
+     * @param where
+     * @return
+     */
+    public long min(String where, String[] params){
+        SQLiteDatabase database = this.getDatabase();
+        StringBuilder s = new StringBuilder(SELECT).append("min(").append(this.getPkColumn()).append(")")
+                .append(FROM).append(this.getTableName());
+        s.append(WHERE).append(where);
+        long ret = 0l;
+        Cursor cursor = database.rawQuery(s.toString(), params);
+        if (cursor.moveToFirst()){
+            ret = cursor.getLong(0);
         }
         cursor.close();
         return ret;
