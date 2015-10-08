@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -154,12 +155,12 @@ public class SqliteContext {
         open(name);
     }
 
-    private Map<String, Map<String, Boolean>> tables = null;
+    private Map<String, Set<String>> tables = null;
     /**
      * 列出表结构和列
      * @return
      */
-    public synchronized Map<String, Map<String, Boolean>> getTables(){
+    public synchronized Map<String, Set<String>> getTables(){
         if (null != tables){
             return tables;
         }
@@ -170,19 +171,13 @@ public class SqliteContext {
         Cursor cursor = this.database.rawQuery(sql, null);
         while (cursor.moveToNext()){
             String name = cursor.getString(0);
-            tables.put(name, new ArrayMap<String, Boolean>());
+            tables.put(name, null);
         }
         cursor.close();
-        final String format = "PRAGMA table_info('%s')";
-        Set<Map.Entry<String, Map<String, Boolean>>> sets = tables.entrySet();
-        for (Map.Entry<String, Map<String, Boolean>> item : sets){
+        Set<Map.Entry<String, Set<String>>> sets = tables.entrySet();
+        for (Map.Entry<String, Set<String>> item : sets){
             String name = item.getKey();
-            sql = String.format(format, name);
-            cursor = this.database.rawQuery(sql, null);
-            while (cursor.moveToNext()){
-                item.getValue().put(cursor.getString(1), true);
-            }
-            cursor.close();
+            tables.put(name, getTableColumns(name));
         }
         return tables;
     }
@@ -192,11 +187,16 @@ public class SqliteContext {
      * @param table
      * @return
      */
-    public Map<String, Boolean> getTableColumns(String table){
-        if (null == tables){
-            getTables();
+    public Set<String> getTableColumns(String table){
+        Set<String> cols = new HashSet<>();
+        final String format = "PRAGMA table_info('%s')";
+        String sql = String.format(format, table);
+        Cursor cursor = this.database.rawQuery(sql, null);
+        while (cursor.moveToNext()){
+            cols.add(cursor.getString(1));
         }
-        return tables.get(table);
+        cursor.close();
+        return cols;
     }
 
     /**
@@ -228,12 +228,12 @@ public class SqliteContext {
      */
     public synchronized void initTable(SqliteMapper mapper){
         String tableName = mapper.getTableName();
-        final Map<String, Boolean> columns = this.getTableColumns(tableName);
+        final Set<String> columns = this.getTableColumns(tableName);
         if (columns == null || columns.size() == 0) {
             String sql = mapper.getTableCreateSql();
             this.createTable(sql);
         }else{
-            this.alterTable(tableName, mapper.getColumnInfo(), columns.keySet());
+            this.alterTable(tableName, mapper.getColumnInfo(), columns);
         }
     }
 

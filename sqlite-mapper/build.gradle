@@ -7,8 +7,8 @@ android {
     defaultConfig {
         minSdkVersion 15
         targetSdkVersion 21
-        versionCode 15100401
-        versionName "1.2.0"
+        versionCode 15100802
+        versionName "1.2.1"
     }
 
     compileOptions {
@@ -53,7 +53,7 @@ ext {
     groupId = 'com.github.yamingd.android'
 }
 
-version = '1.1.0'
+version = '1.2.1'
 
 task sourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs
@@ -62,16 +62,6 @@ task sourcesJar(type: Jar) {
 
 task javadoc(type: Javadoc) {
     source = []
-//    source = android.sourceSets.main.java.srcDirs
-//    File aidlgen = new File(project.buildDir, 'generated/source/aidl/debug')
-//    classpath += project.files(android.getBootClasspath().join(File.pathSeparator), configurations.compile, aidlgen)
-//    title = null
-//    options.doclet = 'com.google.doclava.Doclava'
-//    options.docletpath = [new File(new File(project.projectDir, "libs"), "doclava-1.0.6.jar")]
-//    options.encoding = 'UTF-8'
-//    exclude {
-//        it.file.name.endsWith('.aidl')
-//    }
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
