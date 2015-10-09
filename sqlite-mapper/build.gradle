@@ -8,7 +8,7 @@ android {
         minSdkVersion 15
         targetSdkVersion 21
         versionCode 15100802
-        versionName "1.2.1"
+        versionName "1.2.2"
     }
 
     compileOptions {
@@ -53,7 +53,7 @@ ext {
     groupId = 'com.github.yamingd.android'
 }
 
-version = '1.2.1'
+version = '1.2.2'
 
 task sourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs

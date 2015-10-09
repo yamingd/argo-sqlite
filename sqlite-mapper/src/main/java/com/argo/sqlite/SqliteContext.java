@@ -142,7 +142,7 @@ public class SqliteContext {
         return cb.array();
     }
 
-    public void ensureDbOpen(){
+    public synchronized void ensureDbOpen(){
 
         if (database != null){
             return;
@@ -188,6 +188,7 @@ public class SqliteContext {
      * @return
      */
     public Set<String> getTableColumns(String table){
+        this.ensureDbOpen();
         Set<String> cols = new HashSet<>();
         final String format = "PRAGMA table_info('%s')";
         String sql = String.format(format, table);
