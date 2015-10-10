@@ -11,12 +11,12 @@ compileTestJava {
     options.encoding='UTF-8'
 }
 
-version = '1.2.0'
-
 ext {
     uploadArchive=true
-    artifactId = 'sqlite-annotation'
-    groupId = 'com.github.yamingd.android'
+}
+
+jar{
+    baseName 'sqlite-annotation'
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {

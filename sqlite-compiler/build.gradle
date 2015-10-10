@@ -13,11 +13,11 @@ compileTestJava {
 
 ext{
     uploadArchive=true
-    artifactId = 'sqlite-compiler'
-    groupId = 'com.github.yamingd.android'
 }
 
-version = '2.0.0'
+jar{
+    baseName 'sqlite-compiler'
+}
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
