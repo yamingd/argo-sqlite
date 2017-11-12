@@ -16,15 +16,14 @@
 
 package net.sqlcipher;
 
-import java.util.Map;
-
 import android.database.CharArrayBuffer;
 import android.database.ContentObserver;
 import android.database.DataSetObserver;
-
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.util.Log;
+
+import java.util.Map;
 
 /**
  * Adapts an {@link IBulkCursor} to a {@link Cursor} for use in the local
@@ -314,6 +313,10 @@ public final class BulkCursorToCursorAdaptor extends AbstractWindowedCursor {
 		// TODO Auto-generated method stub
 		
 	}
+
+    @Override
+    public void setExtras(Bundle bundle) {
+    }
 
 
 }

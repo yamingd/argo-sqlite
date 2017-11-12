@@ -16,9 +16,9 @@
 
 package net.sqlcipher;
 
-import java.util.ArrayList;
+import android.os.Bundle;
 
-import android.database.CharArrayBuffer;
+import java.util.ArrayList;
 
 
 /**
@@ -282,6 +282,11 @@ public class MatrixCursor extends AbstractCursor {
     @Override
     public boolean isNull(int column) {
         return get(column) == null;
+    }
+
+    @Override
+    public void setExtras(Bundle bundle) {
+
     }
 
 

@@ -37,6 +37,7 @@ public class SqliteContext {
     private String originalName;
     private byte[] salt;
 
+    private boolean enabled = false;
     private SQLiteDatabase database;
 
     public SqliteContext(Context context, byte[] salt) {
@@ -74,6 +75,14 @@ public class SqliteContext {
     public void setUserId(String userId) {
         this.userId = userId;
         name = "user_" + this.getUserId();
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 
     public SQLiteDatabase getDatabase() {
@@ -124,12 +133,21 @@ public class SqliteContext {
      * @param name
      */
     public void open(String name){
-        File path = getDbFolder(name);
-        if (database == null) {
-            char[] secret = getChars(this.salt);
-            database = SQLiteDatabase.openOrCreateDatabase(path.getAbsolutePath(), secret, null);
-            database.setLockingEnabled(true);
-            Timber.d("open db version: %s(%s)", path, database.getVersion());
+        if (!this.enabled){
+            return;
+        }
+        try {
+            File path = getDbFolder(name);
+            if (database == null) {
+                char[] secret = getChars(this.salt);
+                database = SQLiteDatabase.openOrCreateDatabase(path.getAbsolutePath(), secret, null);
+                database.setLockingEnabled(true);
+                this.enabled = true;
+                Timber.d("open db version: %s(%s)", path, database.getVersion());
+            }
+        } catch (Exception e) {
+            Timber.e(e, "disabled mysqlite database.");
+            this.enabled = false;
         }
     }
 
@@ -217,6 +235,9 @@ public class SqliteContext {
      * @param sql
      */
     public synchronized void createTable(String sql){
+        if (!this.enabled){
+            return;
+        }
         ensureDbOpen();
         this.database.rawExecSQL(sql);
         int v = this.database.getVersion();
@@ -228,6 +249,9 @@ public class SqliteContext {
      * @param mapper
      */
     public synchronized void initTable(SqliteMapper mapper){
+        if (!this.enabled){
+            return;
+        }
         String tableName = mapper.getTableName();
         final Set<String> columns = this.getTableColumns(tableName);
         if (columns == null || columns.size() == 0) {
@@ -243,6 +267,9 @@ public class SqliteContext {
      * @param columns
      */
     public synchronized void alterTable(String tableName, Map<String, String> columns, Set<String> oldColumns){
+        if (!this.enabled){
+            return;
+        }
         ensureDbOpen();
         final String sql = "alter table %s add column %s %s";
         for (String name : oldColumns){
@@ -264,6 +291,9 @@ public class SqliteContext {
      *
      */
     public void deleteFile(){
+        if (!this.enabled){
+            return;
+        }
         File file = getDbFolder(this.name);
         if (file != null && file.exists()){
             file.delete();
@@ -276,6 +306,14 @@ public class SqliteContext {
      * @param block
      */
     public synchronized void update(SqliteBlock<SQLiteDatabase> block){
+        if (!this.enabled){
+            try {
+                block.execute(this.database);
+            } catch (Exception e) {
+                Timber.e(e, "update Error. db-%s", getTag());
+            }
+            return;
+        }
         final long ts = System.currentTimeMillis();
         ensureDbOpen();
         boolean error = false;
@@ -312,7 +350,9 @@ public class SqliteContext {
 
     private synchronized void foreceCloseWhenLocked(){
         Timber.e("foreceCloseWhenLocked");
-
+        if (!this.enabled){
+            return;
+        }
         this.close();
 
         try {
@@ -325,6 +365,10 @@ public class SqliteContext {
     }
 
     public void executeBlock(SqliteBlock<SQLiteDatabase> block) throws Exception{
+        if (!this.enabled){
+            block.execute(this.database);
+            return;
+        }
         Timber.d("%s db-%s update: %s", this, getTag(), database.getPath());
         this.database.beginTransactionWithListener(new SQLiteTransactionListener() {
             @Override
@@ -350,6 +394,14 @@ public class SqliteContext {
      * @param block
      */
     public void query(String tag, SqliteBlock<SQLiteDatabase> block){
+        if (!this.enabled){
+            try {
+                block.execute(this.database);
+            } catch (Exception e) {
+                Timber.e(e, "update Error. db-%s", getTag());
+            }
+            return;
+        }
         final long ts = System.currentTimeMillis();
         ensureDbOpen();
         try {
@@ -367,6 +419,9 @@ public class SqliteContext {
      * 关闭
      */
     public synchronized void close(){
+        if (!this.enabled){
+            return;
+        }
         if (database != null){
             Timber.d("db-%s close: %s", getTag(), database.getPath());
             database.close();
@@ -379,6 +434,9 @@ public class SqliteContext {
      * 重新打开
      */
     public synchronized void reopen(){
+        if (!this.enabled){
+            return;
+        }
         close();
         this.name = this.originalName;
         ensureDbOpen();

@@ -12,13 +12,13 @@ ext{
 }
 
 android {
-    compileSdkVersion 21
-    buildToolsVersion "21.1.0"
+    compileSdkVersion 25
+    buildToolsVersion "25.0.2"
 
     defaultConfig {
         applicationId "com.argo.sqlite.app"
-        minSdkVersion 15
-        targetSdkVersion 21
+        minSdkVersion 19
+        targetSdkVersion 25
         versionCode 1
         versionName "1.0.0"
         multiDexEnabled true
@@ -127,12 +127,9 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     apt project(':sqlite-compiler')
-
     androidTestCompile 'junit:junit:4.11'
     compile project(':sqlite-annotation')
     compile project(':sqlite-mapper')
-
 }

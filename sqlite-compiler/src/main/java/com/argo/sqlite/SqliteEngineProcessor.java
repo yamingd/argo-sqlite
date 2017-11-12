@@ -51,7 +51,7 @@ public class SqliteEngineProcessor extends AbstractProcessor {
 
             ClassMetaData metadata = new ClassMetaData(processingEnv, (TypeElement) classElement);
 
-            Utils.note("SqliteEngineProcessor Processing class " + metadata.getSimpleClassName());
+            //Utils.note("SqliteEngineProcessor Processing class " + metadata.getSimpleClassName());
 
             boolean success = metadata.generate();
             if (!success) {
@@ -70,7 +70,7 @@ public class SqliteEngineProcessor extends AbstractProcessor {
                 Utils.error(e.getMessage(), classElement);
             }
 
-            Utils.note("SqliteEngineProcessor Done Processing class " + metadata.getSimpleClassName());
+            //Utils.note("SqliteEngineProcessor Done Processing class " + metadata.getSimpleClassName());
         }
 
         SqliteModleInitGenerator initGenerator = new SqliteModleInitGenerator(processingEnv, classesToValidate);

@@ -373,7 +373,7 @@ public class ClassMetaData {
     }
 
     public String getFieldTypeName(VariableElement element) {
-        Utils.note("getFieldTypeName: " + element);
+        //Utils.note("getFieldTypeName: " + element);
         final TypeMirror typeMirror = element.asType();
 
         final String typeName = typeMirror.accept(new SimpleTypeVisitor7<String, Void>() {

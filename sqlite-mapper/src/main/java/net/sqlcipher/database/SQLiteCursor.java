@@ -16,6 +16,15 @@
 
 package net.sqlcipher.database;
 
+import android.database.DataSetObserver;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.Process;
+import android.text.TextUtils;
+import android.util.Config;
+import android.util.Log;
+
 import net.sqlcipher.AbstractWindowedCursor;
 import net.sqlcipher.CursorWindow;
 import net.sqlcipher.SQLException;
@@ -24,15 +33,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
-
-import android.database.CharArrayBuffer;
-import android.database.DataSetObserver;
-import android.os.Handler;
-import android.os.Message;
-import android.os.Process;
-import android.text.TextUtils;
-import android.util.Config;
-import android.util.Log;
 
 /**
  * A Cursor implementation that exposes results from a query on a
@@ -195,7 +195,12 @@ public class SQLiteCursor extends AbstractWindowedCursor {
         }
         
     }
-    
+
+    @Override
+    public void setExtras(Bundle bundle) {
+
+    }
+
     /**
      * Execute a query and provide access to its result set through a Cursor
      * interface. For a query such as: {@code SELECT name, birth, phone FROM
